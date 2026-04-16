@@ -64,6 +64,8 @@ node ExeToBin.js <inputfile.exe> -Base64 -OutputFile output.txt
 2. Choose output format (Base64 / Hex / Raw Bytes)
 3. Copy to clipboard or save as file
 
+> **Note:** Large files may take a moment to convert. A progress bar will appear - please wait until the process completes.
+
 ### Node.js CLI
 
 ```bash
