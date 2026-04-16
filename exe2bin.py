@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import base64
 import os
+import threading
 
 
 class ExeToBinConverter:
@@ -130,6 +131,11 @@ class ExeToBinConverter:
             self.status_label.config(text="Please select a file first!")
             return
         
+        thread = threading.Thread(target=self._convert_in_thread)
+        thread.daemon = True
+        thread.start()
+    
+    def _convert_in_thread(self):
         try:
             with open(self.file_path, "rb") as f:
                 data = f.read()
@@ -138,27 +144,29 @@ class ExeToBinConverter:
             
             if mode == "base64":
                 output = base64.b64encode(data).decode("ascii")
-                self.format_label.config(text="Format: BASE64")
+                format_text = "Format: BASE64"
             elif mode == "hex":
                 output = data.hex()
-                self.format_label.config(text="Format: HEXADECIMAL")
+                format_text = "Format: HEXADECIMAL"
             else:
                 output = " ".join(f"{b:02x}" for b in data)
-                self.format_label.config(text="Format: RAW BYTES")
-            
-            self.output_text.delete("1.0", tk.END)
-            self.output_text.insert("1.0", output)
+                format_text = "Format: RAW BYTES"
             
             file_size = len(data)
             output_len = len(output)
+            status_text = f"Converted: {file_size:,} bytes -> {output_len:,} chars ({mode.upper()})"
             
-            self.status_label.config(
-                text=f"Converted: {file_size:,} bytes -> {output_len:,} chars ({mode.upper()})"
-            )
+            self.root.after(0, lambda: self._update_ui(output, format_text, status_text))
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to convert file:\n{str(e)}")
-            self.status_label.config(text="Conversion failed!")
+            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to convert file:\n{str(e)}"))
+            self.root.after(0, lambda: self.status_label.config(text="Conversion failed!"))
+    
+    def _update_ui(self, output, format_text, status_text):
+        self.format_label.config(text=format_text)
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.insert("1.0", output)
+        self.status_label.config(text=status_text)
     
     def copy_to_clipboard(self):
         content = self.output_text.get("1.0", tk.END).strip()
