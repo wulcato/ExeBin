@@ -105,7 +105,7 @@ class ExeToBinConverter:
         
         info_label = ttk.Label(
             buttons_frame, 
-            text="Python Tkinter Version", 
+            text="ExeBin by Wulcato", 
             font=("Helvetica", 8, "italic"),
             foreground="gray"
         )
