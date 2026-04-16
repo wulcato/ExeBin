@@ -36,38 +36,38 @@ class ExeToBinConverter:
         self.file_entry = ttk.Entry(file_frame, width=50)
         self.file_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         
-        browse_btn = ttk.Button(file_frame, text="Browse", command=self.browse_file)
-        browse_btn.pack(side=tk.LEFT)
+        self.browse_btn = ttk.Button(file_frame, text="Browse", command=self.browse_file)
+        self.browse_btn.pack(side=tk.LEFT)
         
         options_frame = ttk.LabelFrame(main_frame, text="Output Format", padding="10")
         options_frame.pack(fill=tk.X, pady=(0, 15))
         
-        base64_rb = ttk.Radiobutton(
+        self.base64_rb = ttk.Radiobutton(
             options_frame, 
             text="Base64", 
             variable=self.output_mode, 
             value="base64",
             command=self.convert_file
         )
-        base64_rb.pack(side=tk.LEFT, padx=(0, 20))
+        self.base64_rb.pack(side=tk.LEFT, padx=(0, 20))
         
-        hex_rb = ttk.Radiobutton(
+        self.hex_rb = ttk.Radiobutton(
             options_frame, 
             text="Hexadecimal", 
             variable=self.output_mode, 
             value="hex",
             command=self.convert_file
         )
-        hex_rb.pack(side=tk.LEFT)
+        self.hex_rb.pack(side=tk.LEFT)
         
-        raw_rb = ttk.Radiobutton(
+        self.raw_rb = ttk.Radiobutton(
             options_frame, 
             text="Raw Bytes", 
             variable=self.output_mode, 
             value="raw",
             command=self.convert_file
         )
-        raw_rb.pack(side=tk.LEFT, padx=(20, 0))
+        self.raw_rb.pack(side=tk.LEFT, padx=(20, 0))
         
         self.format_label = ttk.Label(options_frame, text="Format: BASE64", font=("Helvetica", 9, "italic"))
         self.format_label.pack(side=tk.RIGHT)
@@ -90,19 +90,28 @@ class ExeToBinConverter:
         self.output_text.config(yscrollcommand=scrollbar.set)
         
         self.status_label = ttk.Label(main_frame, text="Ready. Select a file to convert.", font=("Helvetica", 9))
-        self.status_label.pack(pady=(0, 10))
+        self.status_label.pack(pady=(0, 5))
+        
+        self.progress_frame = ttk.Frame(main_frame)
+        self.progress_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        self.progress_label = ttk.Label(self.progress_frame, text="", font=("Helvetica", 8))
+        self.progress_label.pack(side=tk.LEFT)
+        
+        self.progress_bar = ttk.Progressbar(self.progress_frame, mode="indeterminate", length=200)
+        self.progress_bar.pack(side=tk.RIGHT)
         
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.pack(fill=tk.X)
         
-        copy_btn = ttk.Button(buttons_frame, text="Copy to Clipboard", command=self.copy_to_clipboard)
-        copy_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.copy_btn = ttk.Button(buttons_frame, text="Copy to Clipboard", command=self.copy_to_clipboard)
+        self.copy_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        save_btn = ttk.Button(buttons_frame, text="Save as File", command=self.save_to_file)
-        save_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.save_btn = ttk.Button(buttons_frame, text="Save as File", command=self.save_to_file)
+        self.save_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        clear_btn = ttk.Button(buttons_frame, text="Clear", command=self.clear_output)
-        clear_btn.pack(side=tk.LEFT)
+        self.clear_btn = ttk.Button(buttons_frame, text="Clear", command=self.clear_output)
+        self.clear_btn.pack(side=tk.LEFT)
         
         info_label = ttk.Label(
             buttons_frame, 
@@ -131,9 +140,34 @@ class ExeToBinConverter:
             self.status_label.config(text="Please select a file first!")
             return
         
+        self._set_converting_state(True)
+        
         thread = threading.Thread(target=self._convert_in_thread)
         thread.daemon = True
         thread.start()
+    
+    def _set_converting_state(self, converting):
+        if converting:
+            self.status_label.config(text="Converting...")
+            self.progress_bar.start(10)
+            self.progress_label.config(text="Reading file...")
+            self.browse_btn.config(state="disabled")
+            self.copy_btn.config(state="disabled")
+            self.save_btn.config(state="disabled")
+            self.clear_btn.config(state="disabled")
+            self.base64_rb.config(state="disabled")
+            self.hex_rb.config(state="disabled")
+            self.raw_rb.config(state="disabled")
+        else:
+            self.progress_bar.stop()
+            self.progress_label.config(text="")
+            self.browse_btn.config(state="normal")
+            self.copy_btn.config(state="normal")
+            self.save_btn.config(state="normal")
+            self.clear_btn.config(state="normal")
+            self.base64_rb.config(state="normal")
+            self.hex_rb.config(state="normal")
+            self.raw_rb.config(state="normal")
     
     def _convert_in_thread(self):
         try:
@@ -161,8 +195,10 @@ class ExeToBinConverter:
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to convert file:\n{str(e)}"))
             self.root.after(0, lambda: self.status_label.config(text="Conversion failed!"))
+            self.root.after(0, lambda: self._set_converting_state(False))
     
     def _update_ui(self, output, format_text, status_text):
+        self._set_converting_state(False)
         self.format_label.config(text=format_text)
         self.output_text.delete("1.0", tk.END)
         self.output_text.insert("1.0", output)
